@@ -1,0 +1,13 @@
+name = "Workbooks"
+uuid = "937ceacc-f36b-4485-ba02-a271f491c7fe"
+authors = ["Felix Rehren"]
+version = "0.1.0"
+
+[deps]
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+GraphPlot = "a2cc645c-3eea-5389-862e-a155d0052231"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+
+[compat]
+julia = "1.5"
