@@ -34,6 +34,13 @@ This package has the following aims:
     - Interoperability through CSV and a subset of Excel
 
 
+## Related projects and motivation
+
+* [VisiCalc](https://www.wsj.com/articles/40-years-later-lessons-from-the-rise-and-quick-decline-of-the-first-killer-app-11562990402) "was the first piece of software that was so popular that it drove people to buy computers just to run it"
+* [Project Jupyter](https://en.wikipedia.org/wiki/Project_Jupyter) -- notebooks are amazing. Workbooks are a different, complementary point on the spectrum of tools.
+* [What can a technologist do about climate change? A personal view. Tools for scientists & engineers](http://worrydream.com/ClimateChange/#tools)
+
+
 ## Related packages
 
 * [XLSX.jl](https://github.com/felipenoris/XLSX.jl)
