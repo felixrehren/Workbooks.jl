@@ -8,7 +8,7 @@ Sheet(name::String, wb::Workbook) = Sheet(name, wb,
 get(S::Sheet, p::LocalPosition, default = missing) = Base.get(S.map, p, default)
 get(S::Sheet, R::LocalRangeType) = get.([S],collect(R))
 Base.getindex(S::Sheet, p::LocalRef) = get(S, p)
-Base.getindex(S::Sheet, p::String) = get(S, LocalPosition(p))
+Base.getindex(S::Sheet, p::String) = get(S, LocalRef(p))
 
 # No setters for cells: only set at the workbook level
 set!(S::Sheet, p::LocalPosition, f::AbstractString) = set!(S.wb, GlobalPosition(S.name,p), f)
