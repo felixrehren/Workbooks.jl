@@ -101,8 +101,9 @@ end
 add_ancestor(wb::Workbook, ancestor::GlobalRange, descendant::GlobalPosition) = add_ancestor.([wb], collect(ancestor), [descendant])
 
 # write a cell
-set!(wb::Workbook, p::GlobalPosition, f::AbstractString) = set!(wb::Workbook, Cell(p,f))
-Base.setindex!(wb::Workbook, f::AbstractString, p::AbstractString) = set!(wb::Workbook, Cell(p,f))  # note the order: setindex!(object, value, position)
+Base.setindex!(wb::Workbook, f::AbstractString, p::GlobalPosition) = set!(wb, Cell(p,f))
+Base.setindex!(wb::Workbook, f::AbstractString, p::AbstractString) = set!(wb, Cell(p,f))  # note the order: setindex!(object, value, position)
+Base.setindex!(wb::Workbook, f, x) = setindex!(wb,string(f),x)
 
 function setcellbasics(wb::Workbook, c::Cell)
     p = c.position

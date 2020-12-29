@@ -4,6 +4,14 @@ using Test, Workbooks
 wb = Workbook()
 S = wb["Sheet1"]
 
+@testset "references       " begin
+    @test Workbooks.LocalPosition(1,1) == Workbooks.LocalPosition("A1")
+    @test Workbooks.LocalPosition(1,1) == Workbooks.LocalPosition("A",1)
+    @test Workbooks.LocalPosition(1,1) == Workbooks.LocalRef("A1")
+
+    @test Workbooks.GlobalPosition("Sheet1!A1") == Workbooks.GlobalPosition("Sheet1","A1")
+end
+
 @testset "basic formulas   " begin
     # test constant assignment
     S["A1"] = "3"
@@ -32,6 +40,9 @@ S = wb["Sheet1"]
     # test repeated references
     S["A3"] = "=1/A1 + 2/A2 + 3/A1"
     @test S["A3"].value == 1/3 + 2/5 + 3/3
+    # test simplest reference
+    S["C1"] = "=A3"
+    @test S["C1"].value == S["A3"].value
 end
 
 @testset "evaluating ranges" begin
@@ -45,6 +56,13 @@ end
     # refreshing with a range reference
     S["A3"] = "7"
     @test S["D3"].value == 3 + 5 + 7 
+end
+
+@testset "cross-sheet refs " begin
+    S2 = wb["Sheet2"]
+    S2["A1"] = "1"
+    S2["A2"] = "=Sheet1!A2"
+    @test S2["A2"].value == S["A2"].value
 end
 
 @testset "file system      " begin

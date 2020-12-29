@@ -30,6 +30,10 @@ function Cell(p::GlobalPosition, formula::AbstractString)
             
             ancestors = GlobalisedRef.(refs,[p.sheet])
             return DynamicCell(p, formula, func, ancestors, missing)
+        elseif isa(content,Symbol)
+            func = identity
+            ancestors = [GlobalisedRef(string(content),p.sheet)]
+            return DynamicCell(p, formula, func, ancestors, missing)
         end
     else
         content = Meta.parse(formula)

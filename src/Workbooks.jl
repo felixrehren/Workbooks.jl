@@ -4,11 +4,7 @@ using DataStructures, LightGraphs
 using ZipFile, DelimitedFiles
 using PrettyTables, GraphPlot
 
-export plusTwo, greet
 export Workbook, Sheet, Cell
-
-greet() = print("Hello World!")
-plusTwo(x) = x + 2
 
 include("types.jl")
 include("reference.jl")
