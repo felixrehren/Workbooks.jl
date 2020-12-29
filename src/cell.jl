@@ -45,4 +45,7 @@ Base.show(io::IO, c::DynamicCell) = Base.print(io, "Cell = " * string(c.value) *
 
 formula(c::DynamicCell) = c.formula
 formula(c::ConstCell) = string(c.value)
+formula(_::Missing) = missing
 
+value(c::Cell) = c.value
+value(_::Missing) = missing

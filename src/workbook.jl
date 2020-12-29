@@ -61,11 +61,11 @@ function orderedFromSuperset(xx,xxx)
 end
 linear_location(c::Cell, wb::Workbook) = linear_location(c.position, wb)
 linear_location(p::GlobalPosition, wb::Workbook) = findfirst(isequal(p),wb.map.keys)
-function cascade(p::GlobalPosition,wb::Workbook)
+function cascade(p::GlobalPosition,wb::Workbook,latest::Bool=false)
     loc = linear_location(p,wb)
     refreshNeeded = orderedFromSuperset(neighbors(wb.graph, loc),wb.order)
     for key in refreshNeeded
-        refresh!(wb.map[wb.map.keys[key]],wb)
+        latest ? refresh_latest!(wb.map[wb.map.keys[key]],wb) : refresh!(wb.map[wb.map.keys[key]],wb)
         push!(refreshNeeded, orderedFromSuperset(neighbors(wb.graph, key),wb.order)...) # add cells that are further downstream to the list
     end
 end
@@ -132,7 +132,7 @@ function set!(wb::Workbook, c::Cell)
     extendgraph(c,wb)
     refresh_latest!(c,wb)
     # update downstream
-    is_new_node || cascade(c.position,wb) # only if an existing cell has been replaced
+    is_new_node || cascade(c.position,wb,true) # only if an existing cell has been replaced
 end
 
 ## O U T P U T

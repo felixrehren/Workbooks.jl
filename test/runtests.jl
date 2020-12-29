@@ -46,3 +46,9 @@ end
     S["A3"] = "7"
     @test S["D3"].value == 3 + 5 + 7 
 end
+
+@testset "file system      " begin
+    Workbooks.write(wb)
+    wb2 = Workbooks.read()
+    @test all(skipmissing(Workbooks.array(S) .== Workbooks.array(wb2["Sheet1"])))
+end

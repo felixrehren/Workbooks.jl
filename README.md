@@ -12,7 +12,7 @@ julia> Pkg.add("Workbooks")
 ```
 
 
-## Documentation
+## Introduction
 
 This package has the following aims:
 
@@ -25,7 +25,7 @@ This package has the following aims:
 2. **Let the full power of Julia be used**
     - `Cell`s can have any value of any type, including any `Number`, an `Array` or a `Struct`
     - Any function can be called in a `Cell`'s formula (but no side-effects, please?)
-    - The `Workbook` comes with a "config" file that imports modules and defines and custom functions
+    - The `Workbook` comes with a `Project.toml` file, and reads an `include.jl` file if present
     - Standard tooling can add plotting, benchmarking, and other analysis
 
 3. **Other features**
