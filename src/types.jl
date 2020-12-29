@@ -44,8 +44,6 @@ end
 const Position = Union{LocalPosition,GlobalPosition}
 
 ## C E L L S
-abstract type JLXstyle end # not yet done
-
 abstract type Cell end
 mutable struct ConstCell <: Cell
     position::GlobalPosition

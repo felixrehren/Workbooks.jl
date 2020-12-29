@@ -10,19 +10,21 @@ Workbook() = Workbook(
 # getters
 # get a cell
 get(wb::Workbook, p::GlobalPosition, default::Any = EmptyCell(p)) = Base.get(wb.map, p, default)
+get(wb::Workbook, R::GlobalRange) = get.([wb], collect(R))
 get!(wb::Workbook, p::GlobalPosition, default::Cell = EmptyCell(p)) = Base.get!(wb.map, p, default)
-get!(wb::Workbook, r::GlobalRange, default::Cell = EmptyCell(p)) = Base.get!(wb[r.sheet], r.lref, default)
+get!(wb::Workbook, R::GlobalRange) = get!.([wb], collect(R))
 
 # get a sheet
 Base.get(wb::Workbook, s::AbstractString) = getindex(wb, s)
 function Base.getindex(wb::Workbook, s::AbstractString, default = missing)
-    m = match(sheetregex,s)
+    # synonym of wb[s], e.g. wb["Sheet1"] or wb["Sheet1!A1"]
+    m = match(sheetregex,s) # when s = e.g. "Sheet1"
     if !isnothing(m)
         if !(s in keys(wb.sheets))
             if ismissing(default)
                 wb.sheets[s] = Sheet(s, wb)
             else
-                @assert default.wb === wb "Sheet must belong to this workbook"
+                @assert (default.wb === wb) "Sheet must belong to this workbook"
                 wb.sheets[s] = default
             end
         end
@@ -32,17 +34,26 @@ function Base.getindex(wb::Workbook, s::AbstractString, default = missing)
     end
 end
 
-# calculation agents
+## calculation agents
+# get values
+function value(wb::Workbook, p::GlobalPosition) 
+    c = wb.map[p]
+    c.value
+end
+function value(wb::Workbook, r::GlobalRange)
+    map(p -> value(wb,p), collect(r))
+end
+
 # calculate the value of the cell based on current state of sheet
 refresh!(p::AbstractString, wb::Workbook) = refresh!(GlobalPosition(p), wb)
 refresh!(p::GlobalPosition, wb::Workbook) = refresh!(get(wb,p), wb)
 function refresh!(_::ConstCell,_::Workbook) end # nothing to do
 function refresh!(c::DynamicCell,wb::Workbook)
-    c.value = c.func(getfield.(broadcast(p -> wb.map[p],c.ancestors),:value)...)
+    c.value = c.func(value.([wb],c.ancestors)...)
 end
 function refresh_latest!(_::ConstCell,_::Workbook) end
 function refresh_latest!(c::DynamicCell,wb::Workbook)
-    c.value = Base.invokelatest(c.func, getfield.(broadcast(p -> wb.map[p],c.ancestors),:value)...)
+    c.value = Base.invokelatest(c.func, value.([wb],c.ancestors)...)
 end
 
 function orderedFromSuperset(xx,xxx)
@@ -65,30 +76,33 @@ function extendgraph(c::DynamicCell, wb::Workbook)
     
     # create nonexistent ancestors
     for anc in c.ancestors # iterating over GlobalPositions
-        ismissing(get(wb, anc, missing)) && set!(wb, EmptyCell(anc))
+        get!(wb, anc) # creates empty cells where necessary
     end
     # extend graph
     incrementalNodes = length(wb.map) - nv(wb.graph)
     add_vertices!(wb.graph,incrementalNodes)
     # add edges
-    loc = linear_location(c.position,wb)
-    for anc in c.ancestors # iterating over GlobalPositions
-        ancloc = findfirst(isequal(anc),wb.map.keys)
-        add_edge!(wb.graph, ancloc, loc) # ancestor -> descendant
-        if is_cyclic(wb.graph) || has_self_loops(wb.graph)
-            rem_edge!(wb.graph, ancloc, loc) # let's undo that
-            error("There should not be any cycles ... now what?")
-        end
+    for ancestor in c.ancestors # iterating over GlobalPositions
+        add_ancestor(wb,ancestor,c.position)
     end
     
     # update total ordering
     wb.order = topological_sort_by_dfs(wb.graph)    
 end
+function add_ancestor(wb::Workbook, ancestor::GlobalPosition, descendant::GlobalPosition)
+    loc = linear_location(descendant,wb)
+    ancloc = findfirst(isequal(ancestor),wb.map.keys)
+    add_edge!(wb.graph, ancloc, loc) # ancestor -> descendant
+    if is_cyclic(wb.graph) || has_self_loops(wb.graph)
+        rem_edge!(wb.graph, ancloc, loc) # let's undo that
+        error("There should not be any cycles ... now what?")
+    end
+end
+add_ancestor(wb::Workbook, ancestor::GlobalRange, descendant::GlobalPosition) = add_ancestor.([wb], collect(ancestor), [descendant])
 
 # write a cell
-function set!(wb::Workbook, p::Union{AbstractString,GlobalPosition}, f::AbstractString)
-    set!(wb::Workbook, Cell(p,f))
-end
+set!(wb::Workbook, p::GlobalPosition, f::AbstractString) = set!(wb::Workbook, Cell(p,f))
+Base.setindex!(wb::Workbook, f::AbstractString, p::AbstractString) = set!(wb::Workbook, Cell(p,f))  # note the order: setindex!(object, value, position)
 
 function setcellbasics(wb::Workbook, c::Cell)
     p = c.position
@@ -137,6 +151,3 @@ function Base.string(wb::Workbook)
 end
 Base.show(io::IO, wb::Workbook) = Base.print(io, string(wb))
 
-### you got this far last time ... ###
-
-# todo: 1) find name; 2) convert from real XL; 3) write/read file; 4) develop interface
