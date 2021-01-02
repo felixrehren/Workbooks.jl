@@ -3,7 +3,7 @@
 
 ## C E L L   P O S I T I O N S
 const colsyntax = "([A-Z]+)"
-const rowsyntax = "([1-9]+)"
+const rowsyntax = "([1-9][0-9]*)"
 const cellsyntax = colsyntax*rowsyntax
 const cellregex = Regex("^"*cellsyntax*"\$")
 

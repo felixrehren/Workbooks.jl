@@ -70,7 +70,7 @@ function cascade(p::GlobalPosition,wb::Workbook,latest::Bool=false)
     end
 end
 # get the cell into the overall weave of the thing
-function extendgraph(_::ConstCell, _::Workbook) end # nothing to do
+function extendgraph(_::ConstCell, _::Workbook) true end # nothing to do
 function extendgraph(c::DynamicCell, wb::Workbook)
     # basically: make sure cell's ancestors exist & are recorded
     
@@ -81,22 +81,45 @@ function extendgraph(c::DynamicCell, wb::Workbook)
     # extend graph
     incrementalNodes = length(wb.map) - nv(wb.graph)
     add_vertices!(wb.graph,incrementalNodes)
-    # add edges
-    for ancestor in c.ancestors # iterating over GlobalPositions
-        add_ancestor(wb,ancestor,c.position)
+    # add edges 
+    cyclic = false # flag for our loop
+    added_ancestors = GlobalPosition[]
+    for ancestor in c.ancestors # iterating over GlobalRefs to add edges to graph
+        cyclic |= any(add_ancestor(wb,ancestor,c.position))
+         # record the edges we have been adding
+        if isa(ancestor,GlobalPosition)
+            push!(added_ancestors,ancestor)
+        elseif isa(ancestor,GlobalRange)
+            push!(added_ancestors, collect(ancestor)...)
+        else
+            error()
+        end
+        if cyclic # creates cyclic dependencies
+            # unset all of the previously added edges
+            for ancestor in added_ancestors
+                remove_ancestor(wb, ancestor, c.position)
+            end
+            return false # escalate this problem!
+        end
     end
     
     # update total ordering
-    wb.order = topological_sort_by_dfs(wb.graph)    
+    wb.order = topological_sort_by_dfs(wb.graph)
+    true # extended w/o problems
 end
 function add_ancestor(wb::Workbook, ancestor::GlobalPosition, descendant::GlobalPosition)
     loc = linear_location(descendant,wb)
     ancloc = findfirst(isequal(ancestor),wb.map.keys)
     add_edge!(wb.graph, ancloc, loc) # ancestor -> descendant
     if is_cyclic(wb.graph) || has_self_loops(wb.graph)
-        rem_edge!(wb.graph, ancloc, loc) # let's undo that
-        error("There should not be any cycles ... now what?")
+        return true
     end
+    false
+end
+function remove_ancestor(wb::Workbook, ancestor::GlobalPosition, descendant::GlobalPosition)
+    loc = linear_location(descendant,wb)
+    ancloc = findfirst(isequal(ancestor),wb.map.keys)
+    rem_edge!(wb.graph, ancloc, loc) # ancestor -> descendant
 end
 add_ancestor(wb::Workbook, ancestor::GlobalRange, descendant::GlobalPosition) = add_ancestor.([wb], collect(ancestor), [descendant])
 
@@ -110,30 +133,37 @@ function setcellbasics(wb::Workbook, c::Cell)
     # add the cell to the wb
     push!(wb.map, p => c)
     # add the cell to the graph
-    is_new_node = length(wb.map) - nv(wb.graph) # integer
-    add_vertices!(wb.graph,is_new_node)
-
-    # take care of the sheet
-    S = wb[p.sheet]
+    add_vertices!(wb.graph,length(wb.map) - nv(wb.graph))
     # add the cell to the sheet
-    lp = p.lref
-    push!(S.map, lp => c)
-
-    return Bool(is_new_node)
+    push!(wb[p.sheet].map, p.lref => c)
 end
-function cleanup(wb::Workbook, c::Cell)
-    loc = linear_location(c, wb)
+function cleanup(wb::Workbook, p::GlobalPosition)
+    loc = linear_location(p, wb)
     for anc in vertices(wb.graph)
         rem_edge!(wb.graph, anc, loc) # many false positives
     end
 end
 function set!(wb::Workbook, c::Cell)
-    is_new_node = setcellbasics(wb,c)
-    is_new_node || cleanup(wb,c)
-    extendgraph(c,wb)
-    refresh_latest!(c,wb)
-    # update downstream
-    is_new_node || cascade(c.position,wb,true) # only if an existing cell has been replaced
+    p = c.position
+    is_new_node = !haskey(wb.map,p)
+    if !is_new_node
+        oldCell = wb.map[p]
+        cleanup(wb,p)
+    end
+    setcellbasics(wb,c)
+    graph_extended = extendgraph(c,wb)
+    if graph_extended
+        refresh_latest!(c,wb)
+        # update downstream
+        is_new_node || cascade(c.position,wb,true) # only if an existing cell has been replaced
+    else
+        if !is_new_node
+            set!(wb, oldCell)
+        else
+            cleanup(wb, p)
+        end
+        error("The new cell was not set because it creates a cyclic reference")
+    end
 end
 
 ## O U T P U T

@@ -10,6 +10,8 @@ S = wb["Sheet1"]
     @test Workbooks.LocalPosition(1,1) == Workbooks.LocalRef("A1")
 
     @test Workbooks.GlobalPosition("Sheet1!A1") == Workbooks.GlobalPosition("Sheet1","A1")
+
+    @test_throws AssertionError Workbooks.LocalPosition("A0")
 end
 
 @testset "basic formulas   " begin
@@ -43,6 +45,9 @@ end
     # test simplest reference
     S["C1"] = "=A3"
     @test S["C1"].value == S["A3"].value
+    # test a circular reference
+    @test_throws ErrorException S["E5"] = "=E5"
+    @test_throws ErrorException S["A3"] = "=C1"
 end
 
 @testset "evaluating ranges" begin
