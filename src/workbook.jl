@@ -137,6 +137,7 @@ function setcellbasics(wb::Workbook, c::Cell)
     # add the cell to the sheet
     push!(wb[p.sheet].map, p.lref => c)
 end
+# remove all ancestors
 function cleanup(wb::Workbook, p::GlobalPosition)
     loc = linear_location(p, wb)
     for anc in vertices(wb.graph)
@@ -160,7 +161,7 @@ function set!(wb::Workbook, c::Cell)
         if !is_new_node
             set!(wb, oldCell)
         else
-            cleanup(wb, p)
+            set!(wb, EmptyCell(p))
         end
         error("The new cell was not set because it creates a cyclic reference")
     end
