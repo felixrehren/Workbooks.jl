@@ -22,7 +22,7 @@ end
     S["A2"] = "=5"
     @test S["A2"].value == 5
     # the next value will be rewritten
-    S["B1"] = "7"
+    S["B1"] = 7
     # test a formula
     S["B2"] = "=1+A1*(B1-A2)" # now = 1 + 3*(7-5) = 7
     @test S["B2"].value == 7
@@ -46,7 +46,7 @@ end
     S["C1"] = "=A3"
     @test S["C1"].value == S["A3"].value
     # test a circular reference
-    @test_throws ErrorException S["E5"] = "=E5"
+    @test_throws ErrorException S["A1"] = "=A1"
     @test_throws ErrorException S["A3"] = "=C1"
 end
 
@@ -64,14 +64,47 @@ end
 end
 
 @testset "cross-sheet refs " begin
-    S2 = wb["Sheet2"]
+    global S2 = wb["Sheet2"]
     S2["A1"] = "1"
     S2["A2"] = "=Sheet1!A2"
     @test S2["A2"].value == S["A2"].value
 end
 
-@testset "file system      " begin
-    Workbooks.write(wb)
-    wb2 = Workbooks.read()
-    @test all(skipmissing(Workbooks.array(S) .== Workbooks.array(wb2["Sheet1"])))
+@testset "sheets           " begin
+    @test size(wb["Sheet1"]) == (3,4)
+    @test size(S2) == (2,1)
+end
+
+### J e W e L s
+@testset "JWLs             " begin
+    jwl = JWL("test1")
+    jwl.wb = wb
+    Workbooks.updatefiles(jwl)
+
+    jwl.name = "test2"
+    Workbooks.write(jwl)
+
+    jwl_copy = Workbooks.read("test2.jwl")
+    wb_copy = jwl_copy.wb
+    for (sname,S) in wb_copy.sheets
+        @test Workbooks.hassheet(wb,sname)
+        if Workbooks.hassheet(wb,sname)
+            a = axes(S)
+            @test size(S) == size(wb[sname])
+            for i in a[1]
+                for j in a[2]
+                    if ismissing(S[i,j])
+                        @test ismissing(wb[sname][i,j])
+                    else
+                        @test Workbooks.formula(S[i,j]) == Workbooks.formula(wb[sname][i,j])
+                    end    
+                end
+            end
+            @test all(skipmissing(Workbooks.array(S)) .== skipmissing(Workbooks.array(wb[sname])))
+        end
+    end
+
+    T_jwl = Workbooks.readabs("test.jwl")
+    @test hasmethod("DILaum9y", Tuple{})
+    @test DILaum9y() == "JWLs rock"
 end

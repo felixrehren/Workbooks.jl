@@ -1,63 +1,89 @@
 ## reading and writing these files
-const folder = dirname(pathof(Workbooks)) * "/../io/"
 
-function write(wb::Workbook, location::String=folder, filename::AbstractString="Workbook1", overwrite=true)
-    extension = ".jwl"
-    location = folder * filename
-    location *= (filename[end-3:end]==extension) ? "" : extension
-    overwrite || @assert !isfile(location) ("File exists already!")
-    
+# copy the workbook into the relevant folder so it's up-to-date
+"""
+    updatefiles(jwl)
+
+Write the JWL workbook `jwl.wb` to `jwl.folder`, ensuring that the JWL file is up-to-date.
+"""
+function updatefiles(jwl::JWL)
+    for (sname, S) in jwl.wb.sheets
+        sheetloc = joinpath(jwl.folder, sname * ".csv")
+        t = Tables.table(array(S,formula))
+        CSV.write(sheetloc, t; header=false)
+    end
+end
+
+# write the workbook as a .jwl file somewhere
+"""
+    write(jwl[, targetfolder, overwrite])
+
+Copies the JWL workbook to `targetfolder` as a `.jwl` file.
+By default, `overwrite = true`.
+"""
+function write(jwl::JWL, targetfolder::String=tempdir(), overwrite=true)
+    location = joinpath(targetfolder, jwl.name * ".jwl")
+    overwrite || @assert !isfile(location) ("File exists already, and overwrite is set to `false`!")
     w = ZipFile.Writer(location)
-    for (s, S) in wb.sheets # sheet name, Sheet
-        sheetloc = folder * s * ".csv"
-    #    t = Tables.table(array(S,formula))
-    #    CSV.write(sheetloc, t; writeheader=false)
-        f = ZipFile.addfile(w, sheetloc)
-    #    write(f,sprint(show, "text/csv", t))
+    for (sname, S) in jwl.wb.sheets # sheet name, Sheet
+        f = ZipFile.addfile(w, sname * ".csv")
         Base.write(f,sprint(show, "text/csv", array(S,formula)))
     end
-    # add Project.toml, if any
-    f = ZipFile.addfile(w, folder * "Project.toml")
-    # ??
-    # add include.jl, if any
-    f = ZipFile.addfile(w, folder * "include.jl")
-    # ??
-
+    for x in ("include.jl", "Project.toml", "Manifest.toml")
+        p = joinpath(jwl.folder,x)
+        if isfile(p)
+            f = ZipFile.addfile(w, x)
+            Base.write(f, Base.read(p,String))
+        end
+    end
     ZipFile.close(w)
-    # move to its target location?
 end
 
-function read(filelocation::String=folder * "Workbook1.jwl")
-    wb = Workbook()
+# read a .jwl file as a JWL
+"""
+    read(filename[, folder])
 
-     iobuffer = IOBuffer(Base.read(filelocation,String)) # workaround to no method matching `seekend` on ZipFile.ReadableFile
+Reads a `.jwl` file and returns a JWL.
+"""
+read(filename::String,folder::String=tempdir()) = readabs(joinpath(folder,filename))
+function readabs(filelocation::String)
+    name = replace(basename(filelocation),".jwl" => "")
+    targetpath = joinpath(tempdir(),name)
+    isdir(targetpath) || mkdir(targetpath)
+
+    # turn zipped jwl file into temporary location
+    # r = ZipFile.Reader(filelocation)
+    iobuffer = IOBuffer(Base.read(filelocation,String)) # workaround to no method matching `seekend` on ZipFile.ReadableFile
     r = ZipFile.Reader(iobuffer)
-
-    # import sheets
-    isCSV(fname) = fname[end-3:end] == ".csv"
-    for f in filter(f -> isCSV(f.name),r.files)
-        sheetname = basename(f.name)[1:end-4]
-        addSheet(wb, sheetname, DelimitedFiles.readdlm(f,','))
+    for f in r.files
+        Base.write(joinpath(targetpath,f.name), Base.read(f)) # this assumes that there are no folders in the folder
     end
-    # read `Project.toml`, if any
-    f = findfirst(f -> isequal("Project.toml",f.name),r.files)
-    if !isnothing(f)
-        # P = Pkg.read_project(f)
-        # ?? find a way to `using` all the dependencies! ## ASK SOMEONE
-    end
-    # include `include.jl`, if any
-    f = findfirst(f -> isequal("include.jl",f.name),r.files)
-    if !isnothing(f)
-        write(f.name, sprint(show,Base.read(f)))
-        include(f.name)
-        rm(f.name)
-    end
-
     close(r)
+
+    # start the environment
+    Pkg.activate(targetpath) # ?
+    # include `include.jl`, if any
+    pinc = joinpath(targetpath,"include.jl")
+    isfile(pinc) && include(pinc)
+    
+    # import sheets
+    wb = Workbook()
+    isCSV(f) = f[end-3:end] == ".csv"
+    for f in filter(isCSV,readdir(targetpath))
+        filepath = joinpath(targetpath,f)
+        sheetname = basename(f)[1:end-4]
+        addSheet(wb, sheetname, DelimitedFiles.readdlm(filepath,','))
+    end
    
-    wb
+    JWL(name, targetpath, wb)
 end
 
+"""
+    addSheet(wb, name, formulas)
+
+Given an array `formulas`, it creates a new sheet named `name` in the workbook `wb`.
+(It partially overwrites any existing sheet with the same `name`.)
+"""
 function addSheet(wb::Workbook, name::String, formulas::Matrix{Any})
     S = wb[name]
     for i in axes(formulas,1), j in axes(formulas,2)
