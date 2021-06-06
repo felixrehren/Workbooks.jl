@@ -81,3 +81,10 @@ mutable struct Workbook <: AbstractWorkbook
     graph::SimpleDiGraph # directed edge A -> B means A's value is an input to B's formula
     order::Vector{Int} # topological ordering, telling us how to cascade computation (using map)
 end
+
+## F I L E S = JWL = Julia Workbook Library
+mutable struct JWL
+    name::AbstractString
+    folder::AbstractString
+    wb::Workbook
+end

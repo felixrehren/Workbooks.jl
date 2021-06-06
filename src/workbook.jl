@@ -124,8 +124,8 @@ end
 add_ancestor(wb::Workbook, ancestor::GlobalRange, descendant::GlobalPosition) = add_ancestor.([wb], collect(ancestor), [descendant])
 
 # write a cell
-Base.setindex!(wb::Workbook, f::AbstractString, p::GlobalPosition) = set!(wb, Cell(p,f))
-Base.setindex!(wb::Workbook, f::AbstractString, p::AbstractString) = set!(wb, Cell(p,f))  # note the order: setindex!(object, value, position)
+Base.setindex!(wb::Workbook, f::AbstractString, p) = set!(wb, Cell(p,f))
+Base.setindex!(wb::Workbook, f::Number, p) = set!(wb, ConstCell(p,f))
 Base.setindex!(wb::Workbook, f, x) = setindex!(wb,string(f),x)
 
 function setcellbasics(wb::Workbook, c::Cell)
@@ -183,3 +183,4 @@ function Base.string(wb::Workbook)
 end
 Base.show(io::IO, wb::Workbook) = Base.print(io, string(wb))
 
+hassheet(wb::Workbook, sname::String) = haskey(wb.sheets,sname)

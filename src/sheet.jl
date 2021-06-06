@@ -12,9 +12,8 @@ Base.getindex(S::Sheet, p::String) = get(S, LocalRef(p))
 Base.getindex(S::Sheet, i, j) = get(S, LocalPosition(i,j))
 
 # No setters for cells: only set at the workbook level
-Base.setindex!(S::Sheet, f::AbstractString, p::LocalPosition)  = setindex!(S.wb, f, GlobalPosition(S.name,p))
-Base.setindex!(S::Sheet, f::AbstractString, p::AbstractString) = setindex!(S.wb, f, GlobalPosition(S.name,p)) # note the order: setindex!(object, value, position)
-Base.setindex!(S::Sheet, f::AbstractString, i,j)               = setindex!(S.wb, f, GlobalPosition(S.name,LocalPosition(i,j)))
+Base.setindex!(S::Sheet, f, p::Union{LocalPosition,AbstractString}) = setindex!(S.wb, f, GlobalPosition(S.name,p))
+Base.setindex!(S::Sheet, f, i,j)   = setindex!(S.wb, f, GlobalPosition(S.name,LocalPosition(i,j)))
 Base.setindex!(S::Sheet, f, xs...) = setindex!(S,string(f),xs...)
 
 ## O U T P U T
@@ -36,3 +35,8 @@ function Base.string(S::Sheet, field = value)
     pretty_table(String, R, colNumAsStr.(1:size(R,2)), row_names=1:size(R,1))
 end
 Base.show(io::IO, S::Sheet) = Base.print(io, string(S))
+
+function Base.size(S::Sheet)
+    h = hull(S.map.keys)
+    (h.row,h.column)
+end
