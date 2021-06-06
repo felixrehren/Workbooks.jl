@@ -44,6 +44,9 @@ end
 const Position = Union{LocalPosition,GlobalPosition}
 
 ## C E L L S
+"""
+    A struct that wraps a position together with the contents of the cell (value, formula, etc.)
+"""
 abstract type Cell end
 mutable struct ConstCell <: Cell
     position::GlobalPosition
@@ -64,7 +67,13 @@ end
 #     #style::JLXstyle
 # end
 
+"""
+A collection of cells forming a 2D array, belonging to a workbook.
+"""
 abstract type AbstractSheet end
+"""
+A collection of sheets, and a map of cause-and-effect
+"""
 abstract type AbstractWorkbook end
 
 ## S H E E T S
@@ -83,6 +92,9 @@ mutable struct Workbook <: AbstractWorkbook
 end
 
 ## F I L E S = JWL = Julia Workbook Library
+"""
+A wrapper combining a workbook with a name, folder location, `Project.toml` and `include.jl` file.
+"""
 mutable struct JWL
     name::AbstractString
     folder::AbstractString
