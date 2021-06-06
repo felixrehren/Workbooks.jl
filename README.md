@@ -14,7 +14,7 @@ julia> Pkg.add("Workbooks")
 
 ## Introduction
 
-This package has the following aims:
+This package has the following *aims*:
 
 1. **Capture fundamental spreadsheet functionality**
     - Variables are represented by `Cell`s; there are no other/global variables
@@ -24,14 +24,14 @@ This package has the following aims:
 
 2. **Let the full power of Julia be used**
     - `Cell`s can have any value of any type, including any `Number`, an `Array` or a `Struct`
-    - Any function can be called in a `Cell`'s formula (but no side-effects, please?)
+    - Any function can be called in a `Cell`'s formula
     - The `Workbook` comes with a `Project.toml` file, and reads an `include.jl` file if present
     - Standard tooling can add plotting, benchmarking, and other analysis
 
 3. **Other features**
     - Simple file format: zipped collection of sheets + config file
-    - Simple interface in VS Code
-    - Interoperability through CSV and a subset of Excel
+    - Interoperability through CSV (and, hopefully one day, a subset of Excel)
+    - Ability to use Julia packages for graphs and anything else
 
 
 ## Related projects and motivation
